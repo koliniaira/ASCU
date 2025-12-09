@@ -1,9 +1,18 @@
 
 // const WS_URL = "wss://a029f1de13e4.ngrok-free.app";
 
-const WS_URL = (location.protocol === "https:" ? "wss://" : "ws://") +
-               location.hostname +
-               ":8081";
+const HARDCODED_WS_URL = ""; 
+
+function getWebSocketURL() {
+  if (HARDCODED_WS_URL) {
+    return HARDCODED_WS_URL;
+  }
+
+  const protocol = location.protocol === "https:" ? "wss://" : "ws://";
+  return protocol + location.hostname + ":8081";
+}
+
+const WS_URL = getWebSocketURL();
 
 document.addEventListener(
   "touchmove",
