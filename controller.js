@@ -1,6 +1,15 @@
 
 const WS_URL = "wss://3e1cb5a7eef5.ngrok-free.app ";
 
+document.addEventListener(
+  "touchmove",
+  function (e) {
+    e.preventDefault();
+  },
+  { passive: false }
+);
+
+
 const vibrationPatterns = {
   short_pulse: [0, 50],
   long_warning: [0, 200, 100, 200]
