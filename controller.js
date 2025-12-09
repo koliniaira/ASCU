@@ -1,6 +1,5 @@
 
 const WS_URL = "wss://3e1cb5a7eef5.ngrok-free.app ";
-const gestureLayer = document.getElementById("gestureLayer");
 
 const vibrationPatterns = {
   short_pulse: [0, 50],
