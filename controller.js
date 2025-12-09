@@ -1,5 +1,5 @@
 
-const WS_URL = "wss://3e1cb5a7eef5.ngrok-free.app ";
+const WS_URL = "wss://a029f1de13e4.ngrok-free.app";
 
 document.addEventListener(
   "touchmove",
