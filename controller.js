@@ -1,5 +1,9 @@
 
-const WS_URL = "wss://a029f1de13e4.ngrok-free.app";
+// const WS_URL = "wss://a029f1de13e4.ngrok-free.app";
+
+const WS_URL = (location.protocol === "https:" ? "wss://" : "ws://") +
+               location.hostname +
+               ":8081";
 
 document.addEventListener(
   "touchmove",
