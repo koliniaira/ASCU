@@ -10,25 +10,8 @@ body {
   font-family: system-ui, sans-serif;
   display: flex;
   flex-direction: column;
-  height: 100vh;           /* ensure we fill the viewport */
+  height: 100vh;
   align-items: center;
   justify-content: center;
 }
 
-#status {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  font-size: 14px;
-  opacity: 0.7;
-}
-
-/* Debug buttons */
-#debugControls {
-  position: absolute;
-  bottom: 16px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 8px;
-}
