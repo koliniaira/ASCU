@@ -1,6 +1,4 @@
-
-// const WS_URL = "wss://a029f1de13e4.ngrok-free.app";
-
+// ---------------- INPUT (phone -> Unity) ----------------
 const HARDCODED_WS_URL = ""; 
 
 function getWebSocketURL() {
@@ -23,10 +21,6 @@ document.addEventListener(
 );
 
 
-const vibrationPatterns = {
-  short_pulse: [0, 50],
-  long_warning: [0, 200, 100, 200]
-};
 
 // ---------------- FEEDBACK (Unity -> phone) ----------------
 
@@ -36,12 +30,6 @@ function handleFeedback(msg) {
     const u = new SpeechSynthesisUtterance(msg.tts);
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(u);
-  }
-
-  // Vibration (no-op on iOS, fine)
-  if ("vibrate" in navigator && msg.vibrationProfileId) {
-    const pattern = vibrationPatterns[msg.vibrationProfileId];
-    if (pattern) navigator.vibrate(pattern);
   }
 }
 
@@ -121,7 +109,7 @@ function sendInputGesture(gesture) {
     socket.send(JSON.stringify(payload));
   }
 
-  // Debug speech so you can hear gestures even without Unity
+  // Debug speech so gestures are heard even without Unity
   if ("speechSynthesis" in window) {
     const u = new SpeechSynthesisUtterance(gesture.replace("_", " "));
     window.speechSynthesis.cancel();
@@ -136,6 +124,9 @@ let touchStartY = 0;
 let touchStartTime = 0;
 let lastTapTime = 0;
 
+//track current hold direction
+let currentHoldDir = null; // "left" | "right" | null
+
 window.addEventListener(
   "touchstart",
   (e) => {
@@ -143,6 +134,28 @@ window.addEventListener(
     touchStartX = t.clientX;
     touchStartY = t.clientY;
     touchStartTime = Date.now();
+
+    // Decide hold direction based on screen half
+    const screenMid = window.innerWidth / 2;
+    const newDir = t.clientX < screenMid ? "left" : "right";
+
+    if (newDir !== currentHoldDir) {
+      // End previous hold, if any
+      if (currentHoldDir === "left") {
+        sendInputGesture("hold_left_end");
+      } else if (currentHoldDir === "right") {
+        sendInputGesture("hold_right_end");
+      }
+
+      // Start new hold
+      if (newDir === "left") {
+        sendInputGesture("hold_left_start");
+      } else {
+        sendInputGesture("hold_right_start");
+      }
+
+      currentHoldDir = newDir;
+    }
   },
   { passive: true }
 );
@@ -155,9 +168,18 @@ window.addEventListener(
     const dy = t.clientY - touchStartY;
     const dt = Date.now() - touchStartTime;
 
+    // End any ongoing hold when finger lifts
+    if (currentHoldDir === "left") {
+      sendInputGesture("hold_left_end");
+    } else if (currentHoldDir === "right") {
+      sendInputGesture("hold_right_end");
+    }
+    currentHoldDir = null;
+
     const DIST = 40;
     let gesture = null;
 
+    // Keep your original swipe / tap detection for menu + jump
     if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > DIST) {
       gesture = dx > 0 ? "swipe_right" : "swipe_left";
     } else if (Math.abs(dy) > DIST) {
