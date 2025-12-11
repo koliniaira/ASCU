@@ -118,10 +118,7 @@ function handleFeedback(msg) {
       // Audio instructions about game + rotation
       if ("speechSynthesis" in window) {
         const intro = new SpeechSynthesisUtterance(
-          "Game starting. For best experience, turn off screen rotation lock, and " +
-          "keep your phone in landscape mode. " +
-          "In landscape, use the top part of the screen to move left and right, " +
-          "and the bottom of the screen to jump."
+          "Game starting. For best experience, keep your phone in landscape mode. "
         );
       
       // When the intro finishes, tell Unity it's safe to start SFX
@@ -275,6 +272,8 @@ function isMovementArea(y) {
 window.addEventListener(
   "touchstart",
   (e) => {
+    e.preventDefault();
+
     const t0 = e.touches[0];
     if (t0) {
       touchStartX = t0.clientX;
@@ -343,12 +342,13 @@ window.addEventListener(
       // Extra fingers ignored
     }
   },
-  { passive: true }
+  { passive: false }
 );
 
 window.addEventListener(
   "touchend",
   (e) => {
+    e.preventDefault();
      // If portrait and we haven't unlocked TTS, detect quick tap and unlock + speak hint
     if (!isLandscape) {
       const t = e.changedTouches[0];
@@ -455,7 +455,7 @@ window.addEventListener(
       }
     }
   },
-  { passive: true }
+  { passive: false }
 );
 
 // Start connection
