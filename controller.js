@@ -131,7 +131,6 @@ function handleFeedback(msg) {
 
 // Debug buttons
 const testFocusBtn = document.getElementById("testFocus");
-const testActivateBtn = document.getElementById("testActivate");
 
 if (testFocusBtn) {
   testFocusBtn.onclick = () => {
@@ -139,20 +138,7 @@ if (testFocusBtn) {
       eventId: "menu_focus",
       tts: "START",
       speechProfileId: "Default",
-      vibrationProfileId: "short_pulse",
       priority: 1
-    });
-  };
-}
-
-if (testActivateBtn) {
-  testActivateBtn.onclick = () => {
-    handleFeedback({
-      eventId: "menu_activate",
-      tts: "Selection confirmed",
-      speechProfileId: "Default",
-      vibrationProfileId: "long_warning",
-      priority: 2
     });
   };
 }
