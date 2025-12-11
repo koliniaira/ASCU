@@ -1,3 +1,28 @@
+// Global Variables
+let isInMenu = true;  // Default assumption that the first scene is main menu
+let isLandscape = false;
+let hasSpokenRotateHint = false;
+
+// Debug log display (disabled by default, logs still go to browser console)
+const debugLog = [];
+const DEBUG_UI_ENABLED = false; // Set to true to show on-screen logs for troubleshooting
+function addDebugLog(msg) {
+  debugLog.push(msg);
+  if (debugLog.length > 20) debugLog.shift();
+  if (DEBUG_UI_ENABLED) {
+    const logEl = document.getElementById("debugLog");
+    if (logEl) {
+      logEl.textContent = debugLog.join("\n");
+      logEl.style.display = "block";
+    }
+  }
+  // Logs always go to browser console for troubleshooting
+  console.log(msg);
+}
+
+// Initialize orientation on page load
+window.addEventListener('load', updateOrientationHint);
+
 // ---------------- INPUT (phone -> Unity) ----------------
 const HARDCODED_WS_URL = ""; 
 
@@ -20,13 +45,7 @@ document.addEventListener(
   { passive: false }
 );
 
-
-
-// ---------------- FEEDBACK (Unity -> phone) ----------------
-let isInMenu = true;  // Default assumption that the first scene is main menu
-let isLandscape = false;
-let hasSpokenRotateHint = false;
-
+// ---------------- MOBILE ORIENTATION CHECK ----------------
 function updateOrientationHint() {
   const hint = document.getElementById("rotateHint");
   if (!hint) return;
@@ -34,22 +53,21 @@ function updateOrientationHint() {
   // Orientation check: width > height => landscape
   isLandscape = window.innerWidth > window.innerHeight;
 
-  const shouldShow = !isInMenu && !isLandscape; // only in game + portrait
+  console.log("Orientation check:", {
+    isLandscape,
+    width: window.innerWidth,
+    height: window.innerHeight
+  });
+
+  // Show hint whenever we are in portrait, in ANY scene
+  const shouldShow = !isLandscape;
 
   hint.style.display = shouldShow ? "flex" : "none";
 
-  if (shouldShow && !hasSpokenRotateHint && "speechSynthesis" in window) {
-    const u = new SpeechSynthesisUtterance(
-      "Rotate your phone to landscape to use the game controller."
-    );
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(u);
-    hasSpokenRotateHint = true;
-  }
-
   if (!shouldShow) {
-    // Allow hint to be spoken again if they go wrong orientation later
+    // When we go back to landscape, let us speak the hint again next time we enter portrait
     hasSpokenRotateHint = false;
+    console.log("Landscape detected - reset hasSpokenRotateHint");
   }
 }
 
@@ -59,39 +77,59 @@ window.addEventListener("orientationchange", updateOrientationHint);
 window.addEventListener("load", updateOrientationHint);
 
 
+// ---------------- FEEDBACK (Unity -> phone) ----------------
 function handleFeedback(msg) {
-  // --- Update menu vs game mode based on eventId from Unity ---
-  if (msg && typeof msg.eventId === "string") {
-    const id = msg.eventId;
-
-    // Any menu_* event means "we're in the menu"
-    if (id.startsWith("menu_")) {
-      isInMenu = true;
-
-      // Special case: user activated START in the menu
-      // MainMenuManager sends: eventId "menu_activate" with tts "Selected START" for Start. :contentReference[oaicite:6]{index=6}
-      if (id === "menu_activate" && msg.tts) {
-        const t = msg.tts.toLowerCase();
-        if (t.includes("selected start") || t.includes("start")) {
-          isInMenu = false;
-        }
-      }
-    }
-    // Any non-menu event means "we're in some non-menu scene" (game, checkpoint, hazards, etc.)
-    else {
-      isInMenu = false;
-    }
+  if (!msg || typeof msg.eventId !== "string") {
+    return;
   }
-  // Update orientation hint visibility
+
+  const id = msg.eventId;
+  const text = msg.tts || "";
+
+  // --- Decide menu vs game mode ---
+  if (id.startsWith("menu_")) {
+    // Default: menu
+    isInMenu = true;
+
+    // Any menu_activate = user just confirmed a menu item (START))
+    if (id === "menu_activate") {
+      isInMenu = false;
+
+      // Audio instructions about game + rotation
+      if ("speechSynthesis" in window) {
+        const intro = new SpeechSynthesisUtterance(
+          "Game starting. For best experience, turn off screen rotation lock, and " +
+          "keep your phone in landscape mode. " +
+          "In landscape, use the top part of the screen to move left and right, " +
+          "and the bottom of the screen to jump."
+        );
+      
+      // When the intro finishes, tell Unity it's safe to start SFX
+      intro.onend = () => {
+        sendInputGesture("intro_done");
+      };
+
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(intro);
+      }
+      updateOrientationHint();
+      return;
+    }
+  } else {
+    // Any non-menu_* event means we're in some non-menu scene (game, checkpoints, hazards)
+    isInMenu = false;
+  }
+
+  // Update overlay + orientation
   updateOrientationHint();
 
-  // TTS
-  if ("speechSynthesis" in window && msg.tts) {
-    const u = new SpeechSynthesisUtterance(msg.tts);
-    window.speechSynthesis.cancel();
+  // --- TTS from Unity (menu focus, checkpoints, etc.) ---
+  if ("speechSynthesis" in window && text) {
+    const u = new SpeechSynthesisUtterance(text);
     window.speechSynthesis.speak(u);
   }
 }
+
 
 // Debug buttons
 const testFocusBtn = document.getElementById("testFocus");
@@ -158,7 +196,7 @@ function connectToUnity() {
 }
 
 function sendInputGesture(gesture) {
-  console.log("Gesture:", gesture);
+  addDebugLog("Gesture: " + gesture);
 
   const payload = {
     type: "input",
@@ -166,46 +204,90 @@ function sendInputGesture(gesture) {
   };
 
   if (socket && socket.readyState === WebSocket.OPEN) {
+    addDebugLog("Sending to Unity: " + JSON.stringify(payload));
     socket.send(JSON.stringify(payload));
+  } else {
+    addDebugLog("Socket not ready. State: " + (socket?.readyState || "null"));
   }
 
-  // Debug speech so gestures are heard even without Unity
+  // // Debug speech so gestures are heard even without Unity
   // if ("speechSynthesis" in window) {
-  //   const u = new SpeechSynthesisUtterance(gesture.replace("_", " "));
-  //   window.speechSynthesis.cancel();
-  //   window.speechSynthesis.speak(u);
+  //   try {
+  //     const u = new SpeechSynthesisUtterance(gesture.replace(/_/g, " "));
+  //     u.rate = 1.0;
+  //     u.pitch = 1.0;
+  //     u.volume = 1.0;
+  //     window.speechSynthesis.cancel();
+  //     addDebugLog("Speaking: " + gesture.replace(/_/g, " "));
+  //     window.speechSynthesis.speak(u);
+  //   } catch (e) {
+  //     addDebugLog("TTS error: " + e);
+  //   }
   // }
 }
 
 // ---------------- Gesture detection ----------------
 
-let movementTouchId = null;   // finger controlling left/right
-let currentHoldDir = null;    // "left" | "right" | null
 
-let actionTouchId = null;     // finger used for jump/tap
+// Shared state for both modes
+let touchStartX = 0;
+let touchStartY = 0;
+let touchStartTime = 0;
+let lastActionTapTime = 0;
+
+// Controller-mode movement state
+let movementTouchId = null;   // Finger controlling left/right
+let currentHoldDir = null;    // "Left" | "Right" | Null
+
+let actionTouchId = null;     // Finger used for jump/tap
 let actionStartX = 0;
 let actionStartY = 0;
 let actionStartTime = 0;
-let lastActionTapTime = 0;
 
 const SWIPE_DIST = 40;
 const DOUBLE_TAP_MS = 300;
 
-// Movement = bottom half, Jump/Action = top half
+// Movement = bottom 40% of the screen in GAME mode
 function isMovementArea(y) {
-  const midY = window.innerHeight * 0.6; // bottom 40% for movement
-  return y >= midY;
+  return y >= window.innerHeight * 0.6;
 }
 
 window.addEventListener(
   "touchstart",
   (e) => {
+    const t0 = e.touches[0];
+    if (t0) {
+      touchStartX = t0.clientX;
+      touchStartY = t0.clientY;
+      touchStartTime = Date.now();
+    }
+
+    // 1) Recompute orientation INSIDE a user gesture
+    updateOrientationHint();
+
+    // 2) Hard gate input in portrait (see below)
+    if (!isLandscape) {
+      return;
+    }
+
+    // --- MENU MODE: simple single-finger swipe/tap anywhere ---
+    if (isInMenu) {
+      const t = e.touches[0];
+      touchStartX = t.clientX;
+      touchStartY = t.clientY;
+      touchStartTime = Date.now();
+      addDebugLog("Menu mode touch start: x=" + touchStartX + " y=" + touchStartY);
+      return;
+    }
+
+    // --- GAME MODE (isInMenu === false, and we know isLandscape === true here) ---
     for (const t of e.changedTouches) {
       const x = t.clientX;
       const y = t.clientY;
 
-      // Bottom area: movement finger
-      if (isMovementArea(y) && movementTouchId === null) {
+      // Bottom area: movement finger (hold to move left/right)
+      if (movementTouchId === null) {
+      // if (isMovementArea(y) && movementTouchId === null) {
         movementTouchId = t.identifier;
 
         const screenMid = window.innerWidth / 2;
@@ -229,14 +311,15 @@ window.addEventListener(
           currentHoldDir = newDir;
         }
       }
-      // Top area: action finger (jump/tap)
-      else if (!isMovementArea(y) && actionTouchId === null) {
+      // Top area: action finger (jump/tap/swipe)
+      else if (actionTouchId === null && t.identifier !== movementTouchId) {
+      // else if (!isMovementArea(y) && actionTouchId === null) {
         actionTouchId = t.identifier;
         actionStartX = x;
         actionStartY = y;
         actionStartTime = Date.now();
       }
-      // Any extra fingers are ignored for now
+      // Extra fingers ignored
     }
   },
   { passive: true }
@@ -245,6 +328,65 @@ window.addEventListener(
 window.addEventListener(
   "touchend",
   (e) => {
+     // If portrait and we haven't unlocked TTS, detect quick tap and unlock + speak hint
+    if (!isLandscape) {
+      const t = e.changedTouches[0];
+      const dx = Math.abs((t?.clientX || 0) - (touchStartX || 0));
+      const dy = Math.abs((t?.clientY || 0) - (touchStartY || 0));
+      const dt = Date.now() - (touchStartTime || Date.now());
+      const TAP_DIST = 16; // pixels allowed
+      const TAP_MS = 300; // max tap duration
+
+      if (dx <= TAP_DIST && dy <= TAP_DIST && dt < TAP_MS) {
+        // This is a tap in portrait — speak the rotate hint directly
+        if ("speechSynthesis" in window) {
+          const u = new SpeechSynthesisUtterance(
+            "Turn off screen rotation lock, and rotate your phone to landscape to use it as a controller."
+          );
+          window.speechSynthesis.cancel();
+          window.speechSynthesis.speak(u);
+          addDebugLog("Spoke rotation hint after portrait tap");
+          hasSpokenRotateHint = true;
+        }
+      }
+      // In portrait, always stop here: no gestures go to Unity.
+      return;
+  }
+
+    // --- MENU MODE: simple swipe/tap everywhere ---
+    if (isInMenu) {
+      const t = e.changedTouches[0];
+      const dx = t.clientX - touchStartX;
+      const dy = t.clientY - touchStartY;
+      const dt = Date.now() - touchStartTime;
+
+      addDebugLog("Menu mode touch end: dx=" + dx + " dy=" + dy + " dt=" + dt);
+
+      let gesture = null;
+
+      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > SWIPE_DIST) {
+        gesture = dx > 0 ? "swipe_right" : "swipe_left";
+      } else if (Math.abs(dy) > SWIPE_DIST) {
+        gesture = dy > 0 ? "swipe_down" : "swipe_up";
+      } else if (dt < 250) {
+        const now = Date.now();
+        if (now - lastActionTapTime < DOUBLE_TAP_MS) {
+          gesture = "double_tap";
+          lastActionTapTime = 0;
+        } else {
+          gesture = "tap";
+          lastActionTapTime = now;
+        }
+      }
+
+      if (gesture) {
+        addDebugLog("Menu mode gesture detected: " + gesture);
+        sendInputGesture(gesture);
+      }
+      return;
+    }
+
+    // --- GAME MODE (isInMenu === false, and isLandscape === true) ---
     for (const t of e.changedTouches) {
       const x = t.clientX;
       const y = t.clientY;
@@ -261,7 +403,7 @@ window.addEventListener(
         continue;
       }
 
-      // Action finger lifted → detect swipe/tap/double-tap
+      // Action finger lifted → detect swipe/tap/double-tap in top area
       if (t.identifier === actionTouchId) {
         const dx = x - actionStartX;
         const dy = y - actionStartY;
@@ -295,5 +437,5 @@ window.addEventListener(
   { passive: true }
 );
 
-// Start WebSocket after everything is set up
+// Start connection
 connectToUnity();
