@@ -92,25 +92,6 @@ function handleFeedback(msg) {
 
     console.log("Feedback from Unity:", msg);
     
-    // // ---------- SPECIAL CASE: CHECKPOINT ----------
-    // if (id === "checkpoint_reached") {
-    //   // Say the line if there is one
-    //   if ("speechSynthesis" in window && text) {
-    //     window.speechSynthesis.cancel();
-    //     const u = new SpeechSynthesisUtterance(text);
-    //     window.speechSynthesis.speak(u);
-    //   }
-
-    //   // After Unity's 1s delay + a bit of buffer, reload the controller page.
-    //   // This puts us back into the same working state as a fresh run.
-    //   setTimeout(() => {
-    //     console.log("[controller] Checkpoint reached → reloading controller page.");
-    //     window.location.reload();
-    //   }, 1500); // 1000ms (Unity delay) + 500ms buffer
-
-    //   return; // Don't process anything else for this message
-    // }
-    
     // Any menu_activate = user just confirmed a menu item (START))
     if (id === "menu_activate") {
       isInMenu = false;
@@ -226,25 +207,9 @@ function sendInputGesture(gesture) {
   } else {
     addDebugLog("Socket not ready. State: " + (socket?.readyState || "null"));
   }
-
-  // // Debug speech so gestures are heard even without Unity
-  // if ("speechSynthesis" in window) {
-  //   try {
-  //     const u = new SpeechSynthesisUtterance(gesture.replace(/_/g, " "));
-  //     u.rate = 1.0;
-  //     u.pitch = 1.0;
-  //     u.volume = 1.0;
-  //     window.speechSynthesis.cancel();
-  //     addDebugLog("Speaking: " + gesture.replace(/_/g, " "));
-  //     window.speechSynthesis.speak(u);
-  //   } catch (e) {
-  //     addDebugLog("TTS error: " + e);
-  //   }
-  // }
 }
 
 // ---------------- Gesture detection ----------------
-
 
 // Shared state for both modes
 let touchStartX = 0;
