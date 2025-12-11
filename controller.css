@@ -3,7 +3,13 @@ html, body {
   padding: 0;
   height: 100%;
   overflow: hidden;        /* stop scrolling in both directions */
+
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
 }
+
 
 body {
   background: #ffffff;
@@ -37,7 +43,7 @@ body {
 }
 
 #rotateHint p {
-  font-size: 80px; 
+  font-size: 40px; 
   margin: 0;
   line-height: 1.3;
 }

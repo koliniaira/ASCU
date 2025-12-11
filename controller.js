@@ -79,9 +79,7 @@ window.addEventListener("load", updateOrientationHint);
 
 // ---------------- FEEDBACK (Unity -> phone) ----------------
 function handleFeedback(msg) {
-  if (!msg || typeof msg.eventId !== "string") {
-    return;
-  }
+  if (!msg || typeof msg.eventId !== "string") return
 
   const id = msg.eventId;
   const text = msg.tts || "";
@@ -313,6 +311,7 @@ window.addEventListener(
       }
       // Top area: action finger (jump/tap/swipe)
       else if (actionTouchId === null && t.identifier !== movementTouchId) {
+
       // else if (!isMovementArea(y) && actionTouchId === null) {
         actionTouchId = t.identifier;
         actionStartX = x;
