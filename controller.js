@@ -89,6 +89,27 @@ function handleFeedback(msg) {
     // Default: menu
     isInMenu = true;
 
+    console.log("Feedback from Unity:", msg);
+    
+    // // ---------- SPECIAL CASE: CHECKPOINT ----------
+    // if (id === "checkpoint_reached") {
+    //   // Say the line if there is one
+    //   if ("speechSynthesis" in window && text) {
+    //     window.speechSynthesis.cancel();
+    //     const u = new SpeechSynthesisUtterance(text);
+    //     window.speechSynthesis.speak(u);
+    //   }
+
+    //   // After Unity's 1s delay + a bit of buffer, reload the controller page.
+    //   // This puts us back into the same working state as a fresh run.
+    //   setTimeout(() => {
+    //     console.log("[controller] Checkpoint reached → reloading controller page.");
+    //     window.location.reload();
+    //   }, 1500); // 1000ms (Unity delay) + 500ms buffer
+
+    //   return; // Don't process anything else for this message
+    // }
+    
     // Any menu_activate = user just confirmed a menu item (START))
     if (id === "menu_activate") {
       isInMenu = false;
