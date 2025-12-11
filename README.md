@@ -2,8 +2,6 @@
 
 This repository contains a **web-based mobile controller** that lets a smartphone act as an **accessible input device** for a Unity game. The phone sends high-level gestures (swipes, taps, holds) to Unity over WebSockets, and receives feedback (text-to-speech prompts, state changes) from Unity.
 
----
-
 ## 1. Project Overview
 
 The phone controller runs entirely in the browser (HTML/CSS/JS) on a mobile device:

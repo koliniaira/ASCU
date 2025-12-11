@@ -84,6 +84,7 @@ function handleFeedback(msg) {
   const id = msg.eventId;
   const text = msg.tts || "";
 
+  console.log("Feedback from Unity:", msg);
   // --- Decide menu vs game mode ---
   if (id.startsWith("menu_")) {
     // Default: menu
