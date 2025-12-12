@@ -288,8 +288,8 @@ const SWIPE_DIST = 40;     // Minimum pixels to count as a swipe.
 const DOUBLE_TAP_MS = 300; // Maximum time between taps to count as a double-tap
 
 // For treating short movement touches as taps as well
-const GAME_TAP_DIST = 16;
-const GAME_TAP_MS = 250;
+const GAME_TAP_DIST = 16; // If the movement finger moves less than this many pixels
+const GAME_TAP_MS = 250;  // and released within this time, treat as a tap instead of a hold
 
 // Handle the start of touch gesture
 window.addEventListener(
@@ -326,6 +326,9 @@ window.addEventListener(
       // First finger becomes the movement finger (left/right hold).
       if (movementTouchId === null) {
         movementTouchId = t.identifier;
+
+        // Remember where and when this touch started to
+        // later decide if it was a "short tap" vs a "real hold
         moveStartX = x;
         moveStartY = y;
         moveStartTime = Date.now();
@@ -334,14 +337,14 @@ window.addEventListener(
         const newDir = x < screenMid ? "left" : "right";
 
         if (newDir !== currentHoldDir) {
-          // End previous hold if any
+          // If we were already holding in the opposite direction, end that hold.
           if (currentHoldDir === "left") {
             sendInputGesture("hold_left_end");
           } else if (currentHoldDir === "right") {
             sendInputGesture("hold_right_end");
           }
 
-          // Start new hold
+          // Start new hold in chosen direction
           if (newDir === "left") {
             sendInputGesture("hold_left_start");
           } else {
@@ -460,20 +463,24 @@ window.addEventListener(
         currentHoldDir = null;
         movementTouchId = null;
 
-        // ALSO: if this was a quick, small touch, treat it as a tap/double-tap
+        // If this was a quick, small touch, treat it as a tap/double-tap
         const dx = x - moveStartX;
         const dy = y - moveStartY;
         const dt = Date.now() - moveStartTime;
 
+        // Small movement and short duration are treated as a tap / doubletap.
         if (Math.abs(dx) <= GAME_TAP_DIST &&
             Math.abs(dy) <= GAME_TAP_DIST &&
             dt < GAME_TAP_MS) {
 
           let gesture;
           const now = Date.now();
+
+          // If this tap is very close in time to the previous one,
+          // collapse the pair into a single "double_tap".
           if (now - lastActionTapTime < DOUBLE_TAP_MS) {
             gesture = "double_tap";
-            lastActionTapTime = 0;
+            lastActionTapTime = 0;    // reset so a third tap starts a new pair
           } else {
             gesture = "tap";
             lastActionTapTime = now;
