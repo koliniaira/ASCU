@@ -85,6 +85,7 @@ function handleFeedback(msg) {
   const text = msg.tts || "";
 
   console.log("Feedback from Unity:", msg);
+
   // --- Decide menu vs game mode ---
   if (id.startsWith("menu_")) {
     // Default: menu
@@ -93,7 +94,7 @@ function handleFeedback(msg) {
     console.log("Feedback from Unity:", msg);
     
     // Any menu_activate = user just confirmed a menu item (START))
-    if (id === "menu_activate") {
+    if (id === "menu_start_game") {
       isInMenu = false;
 
       // Audio instructions about game + rotation
