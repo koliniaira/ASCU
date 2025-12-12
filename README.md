@@ -1,6 +1,6 @@
 # Accessible Mobile Phone Controller for Unity
 
-This repository contains a **web-based mobile controller** that lets a smartphone act as an **accessible input device** for a Unity game. The phone sends high-level gestures (swipes, taps, holds) to Unity over WebSockets, and receives feedback (text-to-speech prompts, state changes) from Unity.
+This folder contains a **web-based mobile controller** that lets a smartphone act as an **accessible input device** for a Unity game. The phone sends high-level gestures (swipes, taps, holds) to Unity over WebSockets, and receives feedback (text-to-speech prompts, state changes) from Unity.
 
 ## 1. Project Overview
 
@@ -77,8 +77,6 @@ The `gesture` field is one of:
 
 * `swipe_up`
 * `swipe_down`
-* `swipe_left`
-* `swipe_right`
 * `tap`
 * `double_tap`
 
@@ -87,7 +85,6 @@ The `gesture` field is one of:
 * `hold_left_start`, `hold_left_end`
 * `hold_right_start`, `hold_right_end`
 * `tap`, `double_tap`
-* `swipe_up`, `swipe_down`, `swipe_left`, `swipe_right` (from the “action” finger)
 
 Unity maps these to whatever in-game actions make sense (e.g., move left/right, jump, higher jump on double-tap). 
 
@@ -101,8 +98,6 @@ Unity sends JSON messages like:
 {
   "eventId": "menu_focus",
   "tts": "Start game",
-  "speechProfileId": "Default",
-  "vibrationProfileId": "short_pulse",
   "priority": 1
 }
 ```
@@ -125,9 +120,7 @@ Special behaviours:
     * How to use the top/bottom parts of the screen for movement and jumping.
   * After the intro finishes, the phone sends `gesture: "intro_done"` back to Unity, so Unity knows it can start SFX. 
 * `checkpoint_reached`:
-
   * Speaks any supplied `tts` text.
-  * Waits ~1.5 seconds, then **reloads the controller page** to reset its state (useful when restarting or respawning between segments). 
 
 ---
 
@@ -150,7 +143,7 @@ Unity typically:
 * Announces the newly focused button by sending `eventId: "menu_focus"` + `tts` label.
 * Responds to `double_tap` (or `tap`, if you choose) by activating the focused item and sending `eventId: "menu_activate"`.
 
-The HTML includes a small status text and optional debug buttons (`Test menu_focus` and `Test menu_activate`) so you can test behaviour without Unity connected.
+The HTML includes a small status text and optional debug buttons (`Test menu_focus` and `Test menu_activate`).
 
 ---
 
@@ -222,7 +215,9 @@ You can safely customize fonts, colors, and layout while keeping:
 ---
 
 ## 7. Running the Controller
+Serve `controller.html`, `controller.css`, and `controller.js` from the same machine that runs Unity, over HTTP (for example, `python -m http.server 8080`). Then open `http://<your-computer-ip>:8080/controller.html` on your phone. Because the page and Unity are on the same host, the controller will automatically connect to `ws://<your-computer-ip>:8081`.
 
+  ![Terminal running python HTTP server](imgs/python-server.png)
 ### 7.1 Basic Steps
 
 1. **Serve the files**
@@ -232,19 +227,18 @@ You can safely customize fonts, colors, and layout while keeping:
 
    * Start a WebSocket server on port `8081` (or update `HARDCODED_WS_URL` in `controller.js` to match your actual endpoint).
    * Implement:
-
      * Receiving `{"type":"input","gesture":"..."}` from the phone.
      * Sending feedback messages with `eventId` and optional `tts` fields.
 
 3. **Open the controller on your phone**
 
    * On the phone, visit `http://<your-computer-ip>/<path>/controller.html`.
-   * You should hear “Phone connected.” when the WebSocket opens successfully. 
+   * You should hear **“Phone connected.”** when the WebSocket opens successfully. 
 
 4. **Navigate the menu & game**
 
    * Use swipes/taps to navigate the main menu.
-   * After “Start Game,” follow spoken instructions to use landscape two-finger controls.
+   * After **“Start Game,”** follow spoken instructions to use landscape two-finger controls.
 
 ---
 

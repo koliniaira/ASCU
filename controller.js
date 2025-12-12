@@ -1,11 +1,19 @@
-// Global Variables
-let isInMenu = true;  // Default assumption that the first scene is main menu
+// ---------------- GLOBAL VARIABLES ---------------- //
+
+// Default assumption that the first scene is main menu
+let isInMenu = true;    
+// Default assumption that phone is in portrait 
 let isLandscape = false;
+// Whether we've already spoken the rotate hint in this session
 let hasSpokenRotateHint = false;
+// Current highest priority of spoken TTS (to avoid interrupting high-priority messages)
+let currentSpokenPriority = 0;
 
 // Debug log display (disabled by default, logs still go to browser console)
 const debugLog = [];
-const DEBUG_UI_ENABLED = false; // Set to true to show on-screen logs for troubleshooting
+// Set to true to show on-screen logs for troubleshooting
+const DEBUG_UI_ENABLED = false; 
+
 function addDebugLog(msg) {
   debugLog.push(msg);
   if (debugLog.length > 20) debugLog.shift();
@@ -16,14 +24,13 @@ function addDebugLog(msg) {
       logEl.style.display = "block";
     }
   }
-  // Logs always go to browser console for troubleshooting
   console.log(msg);
 }
 
 // Initialize orientation on page load
 window.addEventListener('load', updateOrientationHint);
 
-// ---------------- INPUT (phone -> Unity) ----------------
+// ---------------- INPUT (PHONE -> UNITY) ---------------- //
 const HARDCODED_WS_URL = ""; 
 
 function getWebSocketURL() {
@@ -45,7 +52,7 @@ document.addEventListener(
   { passive: false }
 );
 
-// ---------------- MOBILE ORIENTATION CHECK ----------------
+// ---------------- MOBILE ORIENTATION CHECK ---------------- //
 function updateOrientationHint() {
   const hint = document.getElementById("rotateHint");
   if (!hint) return;
@@ -59,13 +66,13 @@ function updateOrientationHint() {
     height: window.innerHeight
   });
 
-  // Show hint whenever we are in portrait, in ANY scene
+  // Show hint whenever we are in portrait, in any scene
   const shouldShow = !isLandscape;
 
   hint.style.display = shouldShow ? "flex" : "none";
 
   if (!shouldShow) {
-    // When we go back to landscape, let us speak the hint again next time we enter portrait
+    // When we go back to landscape, speak the hint again next time it turns portrait
     hasSpokenRotateHint = false;
     console.log("Landscape detected - reset hasSpokenRotateHint");
   }
@@ -77,7 +84,7 @@ window.addEventListener("orientationchange", updateOrientationHint);
 window.addEventListener("load", updateOrientationHint);
 
 
-// ---------------- FEEDBACK (Unity -> phone) ----------------
+// ---------------- FEEDBACK (UNITY -> PHONE) ---------------- //
 function handleFeedback(msg) {
   if (!msg || typeof msg.eventId !== "string") return
 
@@ -86,15 +93,13 @@ function handleFeedback(msg) {
 
   console.log("Feedback from Unity:", msg);
 
-  // --- Decide menu vs game mode ---
+  // Decide menu vs. game mode based on eventId prefix
   if (id.startsWith("menu_")) {
-    // Default: menu
-    isInMenu = true;
-
-    console.log("Feedback from Unity:", msg);
+    isInMenu = true; 
     
-    // Any menu_activate = user just confirmed a menu item (START))
+    // Special handling for "start game" event
     if (id === "menu_start_game") {
+      // Leaving the menu and going into the game
       isInMenu = false;
 
       // Audio instructions about game + rotation
@@ -103,8 +108,8 @@ function handleFeedback(msg) {
           "Game starting. For best experience, keep your phone in landscape mode. "
         );
       
-      // When the intro finishes, tell Unity it's safe to start SFX
       intro.onend = () => {
+        // When the intro finishes, tell Unity it's safe to start level sound cue
         sendInputGesture("intro_done");
       };
 
@@ -113,36 +118,63 @@ function handleFeedback(msg) {
       }
       updateOrientationHint();
       return;
-    }
+  }
   } else {
-    // Any non-menu_* event means we're in some non-menu scene (game, checkpoints, hazards)
+    // Any non-menu event 
     isInMenu = false;
   }
 
-  // Update overlay + orientation
+  // Update overlay and orientation
   updateOrientationHint();
 
-  // --- TTS from Unity (menu focus, checkpoints, etc.) ---
+  // --- TTS from Unity (menu focus, checkpoints) ---
   if ("speechSynthesis" in window && text) {
-    const u = new SpeechSynthesisUtterance(text);
-    window.speechSynthesis.speak(u);
+    // Priority from Unity (0–3). Fallback to 0 if missing.
+    const incomingPriority =
+      typeof msg.priority === "number" ? msg.priority : 0;
+
+    // Rule of thumb:
+    // - Higher or equal priority: interrupt what’s currently speaking.
+    // - Lower priority than what’s already playing: ignore it.
+    if (incomingPriority >= currentSpokenPriority) {
+      // Kill any queued / currently speaking utterances
+      window.speechSynthesis.cancel();
+
+      const u = new SpeechSynthesisUtterance(text);
+      currentSpokenPriority = incomingPriority;
+
+      // When this finishes (or is cancelled), reset priority
+      u.onend = () => {
+        currentSpokenPriority = 0;
+      };
+
+      window.speechSynthesis.speak(u);
+    } else {
+      console.log(
+        "Dropped low-priority TTS:",
+        msg.eventId,
+        "priority",
+        incomingPriority,
+        "< current",
+        currentSpokenPriority
+      );
+    }
   }
 }
 
+// ---------------- DEBUG BUTTON ---------------- //
+// const testFocusBtn = document.getElementById("testFocus");
 
-// Debug buttons
-const testFocusBtn = document.getElementById("testFocus");
-
-if (testFocusBtn) {
-  testFocusBtn.onclick = () => {
-    handleFeedback({
-      eventId: "menu_focus",
-      tts: "START",
-      speechProfileId: "Default",
-      priority: 1
-    });
-  };
-}
+// if (testFocusBtn) {
+//   testFocusBtn.onclick = () => {
+//     handleFeedback({
+//       eventId: "menu_focus",
+//       tts: "START",
+//       speechProfileId: "Default",
+//       priority: 1
+//     });
+//   };
+// }
 
 // ---------------- INPUT (phone -> Unity) ----------------
 
@@ -196,7 +228,7 @@ function sendInputGesture(gesture) {
   }
 }
 
-// ---------------- Gesture detection ----------------
+// ---------------- GESTURE DETECTION ---------------- //
 
 // Shared state for both modes
 let touchStartX = 0;
@@ -216,7 +248,6 @@ let actionStartTime = 0;
 const SWIPE_DIST = 40;
 const DOUBLE_TAP_MS = 300;
 
-// Movement = bottom 40% of the screen in GAME mode
 function isMovementArea(y) {
   return y >= window.innerHeight * 0.6;
 }
@@ -410,5 +441,5 @@ window.addEventListener(
   { passive: false }
 );
 
-// Start connection
+// Start connection 
 connectToUnity();
