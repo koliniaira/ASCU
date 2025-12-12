@@ -12,7 +12,7 @@ The phone controller runs entirely in the browser (HTML/CSS/JS) on a mobile devi
 * The phone uses **text-to-speech (TTS)** to read those events to the player.
 * It strongly encourages **landscape orientation** and includes an overlay and spoken hints to guide the user.
 
-The Unity side (not included in this repo) is responsible for:
+The Unity side (on a separate folder) is responsible for:
 
 * Hosting a WebSocket server.
 * Translating received gestures into in-game actions.
