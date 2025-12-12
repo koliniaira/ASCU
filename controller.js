@@ -214,6 +214,9 @@ function connectToUnity() {
     const statusEl = document.getElementById("status");
     if (statusEl) statusEl.textContent = "Connected to Unity.";
 
+    // Reset mode on each new connection: assume menu until Unity tells us otherwise.
+    isInMenu = true;
+
     if ("speechSynthesis" in window) {
       const u = new SpeechSynthesisUtterance("Phone connected.");
       window.speechSynthesis.speak(u);
@@ -224,6 +227,10 @@ function connectToUnity() {
     console.log("Disconnected from Unity, retrying soon...");
     const statusEl = document.getElementById("status");
     if (statusEl) statusEl.textContent = "Disconnected. Reconnecting...";
+
+    // Optional but also reset here so a reconnect after a crash starts clean
+    isInMenu = true;
+
     setTimeout(connectToUnity, 2000);
   };
 
