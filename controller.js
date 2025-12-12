@@ -184,18 +184,18 @@ function handleFeedback(msg) {
 }
 
 // ---------------- DEBUG BUTTON ---------------- //
-// const testFocusBtn = document.getElementById("testFocus");
+const testFocusBtn = document.getElementById("testFocus");
 
-// if (testFocusBtn) {
-//   testFocusBtn.onclick = () => {
-//     handleFeedback({
-//       eventId: "menu_focus",
-//       tts: "START",
-//       speechProfileId: "Default",
-//       priority: 1
-//     });
-//   };
-// }
+if (testFocusBtn) {
+  testFocusBtn.onclick = () => {
+    handleFeedback({
+      eventId: "menu_focus",
+      tts: "START",
+      speechProfileId: "Default",
+      priority: 1
+    });
+  };
+}
 
 // ---------------- INPUT (phone -> Unity) ----------------
 /**
@@ -230,6 +230,7 @@ function connectToUnity() {
 
     // Optional but also reset here so a reconnect after a crash starts clean
     isInMenu = true;
+    // isInMenu = false; // DEBUG: force game mode for standalone test scenes
 
     setTimeout(connectToUnity, 2000);
   };
