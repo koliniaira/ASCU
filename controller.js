@@ -287,6 +287,10 @@ let actionStartTime = 0;
 const SWIPE_DIST = 40;     // Minimum pixels to count as a swipe. 
 const DOUBLE_TAP_MS = 300; // Maximum time between taps to count as a double-tap
 
+// For treating short movement touches as taps as well
+const GAME_TAP_DIST = 16;
+const GAME_TAP_MS = 250;
+
 // Handle the start of touch gesture
 window.addEventListener(
   "touchstart",
@@ -322,6 +326,9 @@ window.addEventListener(
       // First finger becomes the movement finger (left/right hold).
       if (movementTouchId === null) {
         movementTouchId = t.identifier;
+        moveStartX = x;
+        moveStartY = y;
+        moveStartTime = Date.now();
 
         const screenMid = window.innerWidth / 2;
         const newDir = x < screenMid ? "left" : "right";
@@ -431,7 +438,20 @@ window.addEventListener(
       const y = t.clientY;
 
       // Movement finger lifted, stop any active hold 
+      // if (t.identifier === movementTouchId) {
+      //   if (currentHoldDir === "left") {
+      //     sendInputGesture("hold_left_end");
+      //   } else if (currentHoldDir === "right") {
+      //     sendInputGesture("hold_right_end");
+      //   }
+      //   currentHoldDir = null;
+      //   movementTouchId = null;
+      //   continue;
+      // }
+
+      // Movement finger lifted, stop any active hold 
       if (t.identifier === movementTouchId) {
+        // Always end any active hold first
         if (currentHoldDir === "left") {
           sendInputGesture("hold_left_end");
         } else if (currentHoldDir === "right") {
@@ -439,6 +459,29 @@ window.addEventListener(
         }
         currentHoldDir = null;
         movementTouchId = null;
+
+        // ALSO: if this was a quick, small touch, treat it as a tap/double-tap
+        const dx = x - moveStartX;
+        const dy = y - moveStartY;
+        const dt = Date.now() - moveStartTime;
+
+        if (Math.abs(dx) <= GAME_TAP_DIST &&
+            Math.abs(dy) <= GAME_TAP_DIST &&
+            dt < GAME_TAP_MS) {
+
+          let gesture;
+          const now = Date.now();
+          if (now - lastActionTapTime < DOUBLE_TAP_MS) {
+            gesture = "double_tap";
+            lastActionTapTime = 0;
+          } else {
+            gesture = "tap";
+            lastActionTapTime = now;
+          }
+
+          sendInputGesture(gesture);
+        }
+
         continue;
       }
 
