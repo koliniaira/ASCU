@@ -191,7 +191,6 @@ if (testFocusBtn) {
     handleFeedback({
       eventId: "menu_focus",
       tts: "START",
-      speechProfileId: "Default",
       priority: 1
     });
   };
