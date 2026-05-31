@@ -1,4 +1,4 @@
-# Accessible Mobile Phone Controller for Unity
+# Accessible Mobile Phone Controller (ASCU) for Unity
 
 This folder contains a **web-based mobile controller** that lets a smartphone act as an **accessible input device** for a Unity game. The phone sends high-level gestures (swipes, taps, holds) to Unity over WebSockets, and receives feedback (text-to-speech prompts, state changes) from Unity.
 
